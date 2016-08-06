@@ -22,4 +22,22 @@ $ sbt run
 
 For different stage functions, you can find it via git tag.
 
+### Level 2
+
+#### Usage
+
+* Add a new Chat Participant
+
+```bash
+(DefaultUser)# /AddChatParticipant
+```
+
+* Remove an existing Chat Participant
+  * ID is an integer
+  * If no such participant exists, no participant will be removed.
+
+```bash
+(DefaultUser)# /RemoveChatParticipant <ID>
+```
+
 

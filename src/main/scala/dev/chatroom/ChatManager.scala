@@ -23,6 +23,8 @@ case object Begin extends ChatroomAction
 case class Reply(name: String, message: String) extends ChatroomAction
 case class Speak(name: String, message: String) extends ChatroomAction
 case object Shutdown extends ChatroomAction
+case object AddChatParticipant extends ChatroomAction
+case class RemoveChatParticipant(id: Int) extends ChatroomAction
 
 class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
   
@@ -31,7 +33,8 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
   var chatlog:BufferedWriter = null
 
   val maxParticipant = 3
-  var chatParticipants = List[ActorRef]()
+  var currentParticipantId = 1
+  var chatParticipants = Map[String, ActorRef]()
   var userActor: ActorRef = null 
 
   def initChatlog() {
@@ -58,16 +61,31 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
     }
   }
   
+  def addChatParticipant(id: Int) {
+    log.debug("** Add ChatParticipant " + id.toString())
+    val bootname = "%Participant%(" + id.toString() + ")"
+    val actorname = "Participant" + id.toString()
+    chatParticipants += actorname -> context.actorOf(Props(new ChatParticipant(bootname)), name=actorname)
+    currentParticipantId += 1
+  }
+  
+  def removeChatParticipant(id: Int) {
+    val actorname = "Participant" + id.toString()
+    val actorref = chatParticipants.getOrElse(actorname, null)
+    
+    if(actorref != null) {
+      chatParticipants -= actorname
+      context stop actorref
+    }
+  }
+  
   startWith(Offline, GoOffline)
   
   when(Offline) {
     case Event(SetupSystem, _) => 
       log.debug("* ChatManager: SetupSystem")
       for( x <- 1 to maxParticipant ) {
-        log.debug("** ChatManager: Setup ChatParticipant " + x.toString())
-        val bootname = "%Participant%(" + x.toString() + ")"
-        val actorname = "Participant" + x.toString()
-        chatParticipants :::= List(context.actorOf(Props(new ChatParticipant(bootname)), name=actorname))
+        addChatParticipant(x)
       }
       log.debug("** ChatManager: Setup User Actor")
       userActor = context.actorOf(Props[UserActor], name="userActor")
@@ -91,6 +109,14 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
         userActor ! Reply("System", "Chatroom is offline.")
       }
       stay
+      
+    case Event(AddChatParticipant, _) =>
+      addChatParticipant(currentParticipantId)
+      stay
+      
+    case Event(RemoveChatParticipant(id: Int), _) =>
+      removeChatParticipant(id)
+      stay
   }
   
 
@@ -105,10 +131,7 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
           userActor ! Reply(name, message)
         }
       } else {
-        chatParticipants.foreach { x => {
-            x ! Speak(name, message)
-          }
-        }
+        chatParticipants.foreach { participant => participant._2 ! Speak(name, message) }
       }
       stay
       
@@ -120,7 +143,7 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
           userActor ! Reply(name, message)
         }
       } else {
-        chatParticipants.foreach { x => x ! Speak(name, message) }
+        chatParticipants.foreach { participant => participant._2 ! Speak(name, message) }
       }
       stay
       
@@ -133,6 +156,14 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
       log.debug("** ChatManager: Shutdown")
       finalizeChatlog
       goto(Offline)
+      
+    case Event(AddChatParticipant, _) =>
+      addChatParticipant(currentParticipantId)
+      stay
+      
+    case Event(RemoveChatParticipant(id: Int), _) =>
+      removeChatParticipant(id)
+      stay
   }
   
   initialize()

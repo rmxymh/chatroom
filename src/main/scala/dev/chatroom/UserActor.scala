@@ -28,6 +28,14 @@ class UserActor extends Actor {
             println("Username " + name + " is renamed as " + tokens(1))
             name = tokens(1)
           }
+        } else if(message.startsWith("/AddChatParticipant")) {
+          context.parent ! AddChatParticipant
+        } else if(message.startsWith("/RemoveChatParticipant")) {
+          val tokens = message.split(" ")
+          if(tokens.length > 1) {
+            val id = Integer.parseInt(tokens(1))
+            context.parent ! RemoveChatParticipant(id)
+          }          
         }
       } else if(message.length() > 0) {
         context.parent ! Speak(name, message)
