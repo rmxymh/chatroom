@@ -15,5 +15,5 @@ target/
 # TextMate
 *.tmproj
 
-# Mac
-.DS_Store
+.cache-main
+bin/
