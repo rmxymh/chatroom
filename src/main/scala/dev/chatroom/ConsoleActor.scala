@@ -3,15 +3,17 @@ package dev.chatroom
 import akka.actor.Actor
 import akka.event.Logging
 
-case object EnableConsole
+case class EnableConsole(name: String)
 
 class ConsoleActor extends Actor {
   
   val log = Logging(context.system, this)
   
   def receive = {
-    case EnableConsole =>
+    case EnableConsole(name: String) =>
       log.debug("ConsoleActor: EnableConsole")
+      val prompt = "(" + name + ")# "
+      print(prompt)
       acceptUserInput
   }
   

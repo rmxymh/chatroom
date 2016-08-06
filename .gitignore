@@ -18,3 +18,4 @@ target/
 .cache-main
 bin/
 *.class
+*.log

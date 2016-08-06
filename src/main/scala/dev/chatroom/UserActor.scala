@@ -17,12 +17,26 @@ class UserActor extends Actor {
   def receive = {
     case MessageFromConsole(message: String) =>
       log.debug("UserActor: Message From Console")
-      context.parent ! Speak(name, message)
-      consoleActor ! EnableConsole
+      if(message.startsWith("/")) {
+        if(message.startsWith("/GoOnline")) {
+          context.parent ! GoOnline
+        } else if(message.startsWith("/GoOffline")) {
+          context.parent ! GoOffline
+        } else if(message.startsWith("/name")) {
+          val tokens = message.split(" ")
+          if(tokens.length > 1) {
+            println("Username " + name + " is renamed as " + tokens(1))
+            name = tokens(1)
+          }
+        }
+      } else if(message.length() > 0) {
+        context.parent ! Speak(name, message)
+      }
+      consoleActor ! EnableConsole(name)
       
     case Begin =>
       log.debug("UserActor: Begin")
-      consoleActor ! EnableConsole
+      consoleActor ! EnableConsole(name)
       
     case Reply(senderName: String, message: String) =>
       log.debug("UserActor: Reply")
