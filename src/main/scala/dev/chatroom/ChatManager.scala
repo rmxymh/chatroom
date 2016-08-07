@@ -69,14 +69,18 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
     currentParticipantId += 1
   }
   
-  def removeChatParticipant(id: Int) {
+  def removeChatParticipant(id: Int): Boolean = {
     val actorname = "Participant" + id.toString()
     val actorref = chatParticipants.getOrElse(actorname, null)
     
     if(actorref != null) {
       chatParticipants -= actorname
       context stop actorref
+      true
+    } else {
+      false
     }
+    
   }
   
   startWith(Offline, GoOffline)
@@ -111,11 +115,17 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
       stay
       
     case Event(AddChatParticipant, _) =>
+      val newParticipantId = currentParticipantId
       addChatParticipant(currentParticipantId)
+      sender ! Reply("System", "New Chat Participant " + newParticipantId.toString + " login")
       stay
       
     case Event(RemoveChatParticipant(id: Int), _) =>
-      removeChatParticipant(id)
+      if(removeChatParticipant(id)) {
+        sender ! Reply("System", "Chat Participant " + id.toString + " logout")
+      } else {
+        sender ! Reply("System", "Chat Participant " + id.toString + " does not exist.")
+      }
       stay
   }
   
@@ -158,11 +168,15 @@ class ChatManager extends Actor with FSM[ChatroomState, ChatroomAction] {
       goto(Offline)
       
     case Event(AddChatParticipant, _) =>
+      val newParticipantId = currentParticipantId
       addChatParticipant(currentParticipantId)
+      sender ! Reply("System", "New Chat Participant " + newParticipantId.toString + " login") 
       stay
       
     case Event(RemoveChatParticipant(id: Int), _) =>
-      removeChatParticipant(id)
+      if(removeChatParticipant(id)) {
+        sender ! Reply("System", "Chat Participant " + id.toString + " logout")
+      }
       stay
   }
   
